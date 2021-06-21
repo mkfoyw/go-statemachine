@@ -15,6 +15,7 @@ var log = logging.Logger("evtsm")
 
 var ErrTerminated = xerrors.New("normal shutdown of state machine")
 
+// Event 发送进入状态机的事件
 type Event struct {
 	User interface{}
 }
@@ -24,20 +25,30 @@ type Event struct {
 // 1. a handler of type -- func(ctx Context, st <T>) (func(*<T>), error), where <T> is the typeOf(User) param
 // 2. the number of events processed
 // 3. an error if occured
+// 状态机的事件处理函数， 处理进入状态机的内部事件
 type Planner func(events []Event, user interface{}) (interface{}, uint64, error)
 
+// 状态机
 type StateMachine struct {
-	planner  Planner
+	//状态机的事件处理函数
+	planner Planner
+	//输入事件队列
 	eventsIn chan Event
 
-	name      interface{}
-	st        *statestore.StoredState
+	// 状态机的id
+	name interface{}
+	// 存储状态机的内部状态
+	st *statestore.StoredState
+	// 状态机内部保存数据的数据结构类型
 	stateType reflect.Type
 
 	stageDone chan struct{}
-	closing   chan struct{}
-	closed    chan struct{}
+	// 状态机正在开始关闭
+	closing chan struct{}
+	// 状态机已经关闭
+	closed chan struct{}
 
+	// 状态机繁忙， 正在运行事件处理函数
 	busy int32
 }
 
@@ -114,17 +125,22 @@ func (fsm *StateMachine) run() {
 	}
 }
 
+// mutateUser 修改状态机内部状态数据
 func (fsm *StateMachine) mutateUser(cb func(user interface{}) error) error {
+	// 生成状态机的输入函数函数类型
 	mutt := reflect.FuncOf([]reflect.Type{reflect.PtrTo(fsm.stateType)}, []reflect.Type{reflect.TypeOf(new(error)).Elem()}, false)
 
+	// 创建输入动作函数类型
 	mutf := reflect.MakeFunc(mutt, func(args []reflect.Value) (results []reflect.Value) {
 		err := cb(args[0].Interface())
 		return []reflect.Value{reflect.ValueOf(&err).Elem()}
 	})
 
+	// 输入动作函数开始修改状态机的内部函数
 	return fsm.st.Mutate(mutf.Interface())
 }
 
+// 发送一个事件到状态机
 func (fsm *StateMachine) send(evt Event) error {
 	select {
 	case <-fsm.closed:
@@ -134,6 +150,7 @@ func (fsm *StateMachine) send(evt Event) error {
 	}
 }
 
+// stop 停止状态机
 func (fsm *StateMachine) stop(ctx context.Context) error {
 	close(fsm.closing)
 

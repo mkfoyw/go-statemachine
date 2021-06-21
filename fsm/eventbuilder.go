@@ -5,8 +5,11 @@ import "golang.org/x/xerrors"
 type recordEvent struct{}
 
 type transitionToBuilder struct {
-	name             EventName
-	action           ActionFunc
+	//事件的名字
+	name EventName
+	//事件所引发的输入动作
+	action ActionFunc
+	//该事件能够引发的状态转换
 	transitionsSoFar map[StateKey]StateKey
 	nextFrom         []StateKey
 }
