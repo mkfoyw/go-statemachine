@@ -22,14 +22,12 @@ type StateHandlerWithInit interface {
 
 // StateGroup manages a group of state machines sharing the same logic
 type StateGroup struct {
-	//  存储状态机
 	sts *statestore.StateStore
 	// 事件处理函数
 	hnd StateHandler
 	// 状态机内部数据结构的类型
 	stateType reflect.Type
 
-	//正在关闭状态机组
 	closing      chan struct{}
 	initNotifier sync.Once
 

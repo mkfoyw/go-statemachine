@@ -15,7 +15,7 @@ var log = logging.Logger("evtsm")
 
 var ErrTerminated = xerrors.New("normal shutdown of state machine")
 
-// Event 发送进入状态机的事件
+// Event 发送进入状态机的事件，
 type Event struct {
 	User interface{}
 }
@@ -42,6 +42,7 @@ type StateMachine struct {
 	// 状态机内部保存数据的数据结构类型
 	stateType reflect.Type
 
+	// 已经执行完毕该阶段的退出函数
 	stageDone chan struct{}
 	// 状态机正在开始关闭
 	closing chan struct{}
@@ -109,6 +110,7 @@ func (fsm *StateMachine) run() {
 			}
 
 			go func() {
+				// 执行状态机的退出函数
 				if nextStep != nil {
 					res := reflect.ValueOf(nextStep).Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(ustate).Elem()})
 
